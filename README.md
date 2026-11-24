@@ -31,6 +31,10 @@
 <br />
 <sub>Works on Ubuntu, Linux Mint, Pop!_OS, Fedora, Debian &amp; Arch · No account required · <a href="PRIVACY_POLICY.md"><strong>Privacy Policy (Zero Tracking)</strong></a> · <a href="https://github.com/Aussie-App-Studio/Pix-Relay-Auto-Linux-Sync/releases/latest/download/Pix-Relay-Auto-Linux-Sync-x86_64.rpm">Fedora / RHEL (.rpm)</a> · <a href="https://github.com/Aussie-App-Studio/Pix-Relay-Auto-Linux-Sync/releases/latest">All Releases</a> · <a href="LICENSE">License (All Rights Reserved)</a></sub>
 
+<br />
+<br />
+<img src="assets/pix-relay-banner.png" alt="Pix Relay — Private Wi-Fi Sync for Your Backup Pixel" width="820" />
+
 </div>
 
 ---
