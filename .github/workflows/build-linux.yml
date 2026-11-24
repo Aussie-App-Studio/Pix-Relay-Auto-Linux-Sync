@@ -1,0 +1,102 @@
+name: Build Linux Packages
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Tauri v2 Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm
+
+      - name: Install npm dependencies
+        run: npm ci || npm install
+
+      - name: Build & typecheck frontend
+        run: npm run build
+
+      - name: Run Rust unit and loopback E2E tests
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Build Tauri Linux bundles (.deb, .rpm, .AppImage)
+        env:
+          CI: true
+        run: npx tauri build
+
+      - name: Stage cleanly named release files
+        run: |
+          mkdir -p release-files
+          APPIMAGE=$(find src-tauri/target/release/bundle/appimage -maxdepth 1 -name '*.AppImage' | head -n 1)
+          DEB=$(find src-tauri/target/release/bundle/deb -maxdepth 1 -name '*.deb' | head -n 1)
+          RPM=$(find src-tauri/target/release/bundle/rpm -maxdepth 1 -name '*.rpm' | head -n 1)
+          cp "$APPIMAGE" "release-files/Pix-Relay-Auto-Linux-Sync-x86_64.AppImage"
+          cp "$DEB" "release-files/Pix-Relay-Auto-Linux-Sync-amd64.deb"
+          cp "$RPM" "release-files/Pix-Relay-Auto-Linux-Sync-x86_64.rpm"
+          ls -lh release-files/
+
+      - name: Upload Linux bundle artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pix-relay-auto-linux-sync-bundles
+          path: release-files/*
+
+      - name: Publish GitHub Release with Linux installers (on v* tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Pix Relay: Auto Linux Sync ${{ github.ref_name }}"
+          body: |
+            ## Download for Linux
+
+            - **Every Linux Distro (Ubuntu, Mint, Fedora, Pop!_OS, Arch):** Download **`Pix-Relay-Auto-Linux-Sync-x86_64.AppImage`**
+              - Right-click → **Properties** → **Permissions** → check **Allow executing file as program** (or run `chmod +x Pix-Relay-Auto-Linux-Sync-x86_64.AppImage`), then double-click to open.
+            - **Ubuntu / Debian / Linux Mint:** Download **`Pix-Relay-Auto-Linux-Sync-amd64.deb`** and double-click to install (or `sudo apt install ./Pix-Relay-Auto-Linux-Sync-amd64.deb`).
+            - **Fedora / RHEL:** Download **`Pix-Relay-Auto-Linux-Sync-x86_64.rpm`** and double-click to install (or `sudo dnf install ./Pix-Relay-Auto-Linux-Sync-x86_64.rpm`).
+
+            ---
+            100% Offline · Zero Internet Connections · Zero Tracking
+          files: |
+            release-files/Pix-Relay-Auto-Linux-Sync-x86_64.AppImage
+            release-files/Pix-Relay-Auto-Linux-Sync-amd64.deb
+            release-files/Pix-Relay-Auto-Linux-Sync-x86_64.rpm
